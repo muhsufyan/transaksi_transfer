@@ -1,0 +1,20 @@
+version: "1"
+packages:
+# nama dari package go yg akan diinstall adlh db
+  - name: "db"
+  # path untuk generate db akan disimpan. jd di folder db buat folder sqlc
+    path: "./db/sqlc"
+    # semua query yg kita buat dlm file simpan di folder db/query. 
+    queries: "./db/query/"
+    # isinya adlh file schema/migrasi. simpan di folder db/migration
+    schema: "./db/migration/"
+    # engine db yg kita gunakan, kasus ini adlh postgresql
+    engine: "postgresql"
+    # data akan berupa json, jd true
+    emit_json_tags: true
+    # optimalisasi performance, ktia tdk perlu jd false
+    emit_prepared_queries: false
+    # mock => untuk testing, 
+    emit_interface: false
+    # false artinya nama tabel accounts, structnya Account. true artinya nama tabel accounts, structnya Accounts
+    emit_exact_table_names: false
