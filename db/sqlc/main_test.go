@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	// config dari postgres agar connect ke db
 	dbDriver = "postgres"
 	dbSource = "postgresql://root:password@localhost:5432/bank?sslmode=disable"
 )

@@ -26,6 +26,8 @@ generatesqlcfromyaml:
 	sqlc generate
 installpgengine:
 	go get github.com/lib/pg
-.PHONY: pull_postgres12alpine new_container_postgres installsqlc run_postgres createdb migratesqlc installgolangmigrate dropdb migrateup migratedown sqlcyaml generatesqlcfromyaml installpgengine
+test:
+	go test -v -cover ./...
+.PHONY: pull_postgres12alpine new_container_postgres installsqlc run_postgres createdb migratesqlc installgolangmigrate dropdb migrateup migratedown sqlcyaml generatesqlcfromyaml installpgengine test
 
 https://www.youtube.com/watch?v=6_CH8Gx414A docker-compose
