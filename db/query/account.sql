@@ -8,6 +8,9 @@ INSERT INTO accounts (
 -- name: GetAccount :one
 SELECT * FROM accounts WHERE id = $1 LIMIT 1;
 
+-- name: GetAccountForUpdate :one
+SELECT * FROM accounts WHERE id = $1 LIMIT 1 FOR UPDATE;
+
 -- name: ListAccounts :many
 SELECT * FROM accounts ORDER BY id LIMIT $1 OFFSET $2; 
 
