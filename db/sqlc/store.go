@@ -57,9 +57,6 @@ type TransferTxResult struct {
 	ToEntry     Entry    `json:"to_entry"`
 }
 
-//mengetahui/debug deadlock
-var txKey = struct{}{} //struct kosong untuk menampung debug
-
 // melakukan transaksi transfer uang dr 1 akun ke akun lain
 // yg dilakukan is membuat record transfer, add account entries, dan update akun balance dg 1 transaksi db
 func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
@@ -67,10 +64,6 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 	// create & run new db transaksi
 	err := store.execTx(ctx, func(q *Queries) error {
 		var err error
-		// get value from txKey debug
-		txName := ctx.Value(txKey)
-		// tulis log dr stiap nama transaksi
-		fmt.Println(txName, "buat transfer")
 		// query untuk transaksi membuat transfer, param 2 tangkap data yg dimasukkan
 		result.Transfer, err = q.CreateTransfer(ctx, CreateTransferParams{
 			FromAccountID: arg.FromAccountID,
@@ -80,8 +73,6 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		if err != nil {
 			return err
 		}
-		// tulis log dr stiap nama entry
-		fmt.Println(txName, "buat entry 1")
 		result.FromEntry, err = q.CreateEntry(ctx, CreateEntryParams{
 			AccountID: arg.FromAccountID,
 			Amount:    -arg.Amount, //uang ditransfer /keluar
@@ -89,8 +80,6 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		if err != nil {
 			return err
 		}
-		// tulis log dr stiap nama entry
-		fmt.Println(txName, "buat entry 2")
 		result.ToEntry, err = q.CreateEntry(ctx, CreateEntryParams{
 			AccountID: arg.ToAccountID,
 			Amount:    arg.Amount,
@@ -98,35 +87,20 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		if err != nil {
 			return err
 		}
-		// tulis log dr stiap nama akun
-		fmt.Println(txName, "get akun 1")
 		// get akun => update balance-nya
-		// akun1 as transfer
-		account1, err := q.GetAccountForUpdate(ctx, arg.FromAccountID)
-		if err != nil {
-			return err
-		}
-		// tulis log update
-		fmt.Println(txName, "update akun 1")
-		result.FromAccount, err = q.UpdateAccount(ctx, UpdateAccountParams{
-			ID:      arg.FromAccountID,
-			Balance: account1.Balance - arg.Amount,
+		// update akun1 as transfer
+
+		result.FromAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+			ID:     arg.FromAccountID,
+			Amount: -arg.Amount,
 		})
 		if err != nil {
 			return err
 		}
-		// tulis log dr stiap nama akun
-		fmt.Println(txName, "get akun 2")
-		// akun2 as ditransfer
-		account2, err := q.GetAccountForUpdate(ctx, arg.ToAccountID)
-		if err != nil {
-			return err
-		}
-		// tulis log update
-		fmt.Println(txName, "update akun 2")
-		result.ToAccount, err = q.UpdateAccount(ctx, UpdateAccountParams{
-			ID:      arg.ToAccountID,
-			Balance: account2.Balance + arg.Amount,
+		// update akun2 as ditransfer
+		result.ToAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+			ID:     arg.ToAccountID,
+			Amount: arg.Amount,
 		})
 		if err != nil {
 			return err

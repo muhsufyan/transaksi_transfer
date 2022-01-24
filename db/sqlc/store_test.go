@@ -18,17 +18,15 @@ func TestTransferTx(t *testing.T) {
 	fmt.Println(">> sblm transaksi(transfer) : ", account1.Balance, account2.Balance)
 
 	// run concurrent transfer transaction. create 5 go routine to execute 5 concurrent transfer transaction
-	n := 2                                 //run 5 concurrent transfer transaction
+	n := 5                                 //run 5 concurrent transfer transaction
 	amount := int64(10)                    //1 kali transfer sebsr 10 (e.g. $10)
 	errs := make(chan error)               //BUAT CHANNEL error. untuk receive error from difference go routine to main routine.
 	results := make(chan TransferTxResult) //BUAT CHANNEL hsl transfer. untuk receive hsl transfer
 
 	for i := 0; i < n; i++ {
-		// debug deadlock dg setiap kali transaksi diberi nama dan print
-		txName := fmt.Sprintf("tx, transfer ke %d", i+1) //nanti akan dihslkan tx 1, tx 2, ..,tx n
 		// start routine.
 		go func() {
-			ctx := context.WithValue(context.Background(), txKey, txName)
+			ctx := context.Background()
 			// lakukan dan simpan transaksi
 			result, err := store.TransferTx(ctx, TransferTxParams{
 				// transfer amount uang dari akun1 ke akun2
