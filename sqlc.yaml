@@ -18,3 +18,5 @@ packages:
     emit_interface: false
     # false artinya nama tabel accounts, structnya Account. true artinya nama tabel accounts, structnya Accounts
     emit_exact_table_names: false
+    # true: the result returned by a many query will be an empty slice
+    emit_empty_slices: true

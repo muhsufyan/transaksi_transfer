@@ -50,5 +50,8 @@ jobs:
     - name: run migration
       run: make migrateup
 
+    - name: install go-gin
+      run: go get -u github.com/gin-gonic/gin
+      
     - name: Test
       run: make test
