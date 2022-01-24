@@ -117,3 +117,60 @@ func TestTransferTx(t *testing.T) {
 	require.Equal(t, account1.Balance-int64(n)*amount, updatedAccount1.Balance)
 	require.Equal(t, account2.Balance+int64(n)*amount, updatedAccount2.Balance)
 }
+
+// cek deadlock jd hsl diabaikan. idenya ada 10 transaksi, 5 transaksi yaitu kirim uang dr akun1 ke akun2 lalu 5 transaksi lainnya dari akun2 ke akun 1
+func TestTransferTxDeadlock(t *testing.T) {
+	store := NewStore((testDB))
+	// transfer dari akun1 ke akun2
+	account1 := createRandomAccount(t)
+	account2 := createRandomAccount(t)
+	// debug
+	fmt.Println(">> sblm transaksi(transfer) : ", account1.Balance, account2.Balance)
+
+	// run concurrent transfer transaction.
+	n := 10 //run 10 concurrent transfer transaction
+	// idenya, 5 transaksi yaitu kirim uang dr akun1 ke akun2 lalu 5 transaksi lainnya dari akun2 ke akun 1
+	amount := int64(10)      //1 kali transfer sebsr 10 (e.g. $10)
+	errs := make(chan error) //BUAT CHANNEL error. untuk receive error from difference go routine to main routine.
+
+	for i := 0; i < n; i++ {
+		// genap transaksi dr akun1 ke akun2
+		fromAccountID := account1.ID
+		toAccountID := account2.ID
+		// transaksinya bagi 2.
+		if i%2 == 1 {
+			// ganjil maka transaksi dr akun2 ke akun1
+			fromAccountID = account2.ID
+			toAccountID = account1.ID
+		}
+		// start routine.
+		go func() {
+			ctx := context.Background()
+			// lakukan dan simpan transaksi
+			_, err := store.TransferTx(ctx, TransferTxParams{
+				// transfer amount uang dari akun1 ke akun2
+				FromAccountID: fromAccountID,
+				ToAccountID:   toAccountID,
+				Amount:        amount,
+			})
+			errs <- err // send error to the errors channel
+		}() //agar jln hrs ditambah tanda ()
+	}
+	// cek result, mengecek transfer & entry obj yg tlh dibuat
+	for i := 0; i < n; i++ {
+		err := <-errs //receive error from channel errors
+		require.NoError(t, err)
+
+	}
+	// cek final updated balance. balance dr akun2
+	// get akun1 terupdate dr db
+	updatedAccount1, err := testQueries.GetAccount(context.Background(), account1.ID)
+	require.NoError(t, err)
+	// get akun2 terupdate dr db
+	updatedAccount2, err := testQueries.GetAccount(context.Background(), account2.ID)
+	require.NoError(t, err)
+
+	fmt.Println(">> stlh transaksi(transfer) : ", updatedAccount1.Balance, updatedAccount2.Balance)
+	require.Equal(t, account1.Balance, updatedAccount1.Balance)
+	require.Equal(t, account2.Balance, updatedAccount2.Balance)
+}
