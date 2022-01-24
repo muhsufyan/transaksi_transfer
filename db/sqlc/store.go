@@ -90,43 +90,44 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		// update akun (transaksi) yg pertama dilakukan adlh yg id nya paling kecil
 		// si pentransfer(from akun) di update dulu baru si penerima(to akun)
 		if arg.FromAccountID < arg.ToAccountID {
-			// get akun => update balance-nya
-			// update akun1 as transfer
-			result.FromAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
-				ID:     arg.FromAccountID,
-				Amount: -arg.Amount,
-			})
-			if err != nil {
-				return err
-			}
-			// update akun2 as ditransfer
-			result.ToAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
-				ID:     arg.ToAccountID,
-				Amount: arg.Amount,
-			})
-			if err != nil {
-				return err
-			}
+			// update from akun(pengirim transfer) dulu baru to akun(menerima transfer)
+			// -arg.Amount karena dia mentransfer uang, sedangkan arg.Amount karena dia menerima uang
+			result.FromAccount, result.ToAccount, err = addMoney(ctx, q, arg.FromAccountID, -arg.Amount, arg.ToAccountID, arg.Amount)
 		} else { // si penerima(to akun) di update dulu baru si pentransfer(from akun)
-			// update akun2 as ditransfer
-			result.ToAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
-				ID:     arg.ToAccountID,
-				Amount: arg.Amount,
-			})
-			if err != nil {
-				return err
-			}
-			// update akun1 as transfer
-			result.FromAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
-				ID:     arg.FromAccountID,
-				Amount: -arg.Amount,
-			})
-			if err != nil {
-				return err
-			}
+			// atau toAccount diupdate sblm fromAccount
+			// arg.Amount karena dia menerima uang, sedangkan -arg.Amount karena dia mentransfer uang
+			result.ToAccount, result.FromAccount, err = addMoney(ctx, q, arg.ToAccountID, arg.Amount, arg.FromAccountID, -arg.Amount)
+
 		}
 
 		return nil
 	})
 	return result, err
+}
+
+// REFACTOR
+// add money to 2 account
+func addMoney(
+	ctx context.Context,
+	q *Queries,
+	accountID1 int64,
+	amount1 int64,
+	accountID2 int64,
+	amount2 int64,
+) (account1 Account, account2 Account, err error) {
+	//param untuk return akunya stlh diupdate
+	// add amount1 to account1 balance. // update akun
+	account1, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID:     accountID1,
+		Amount: amount1,
+	})
+	if err != nil {
+		return
+	}
+	// add amount2 to account2 balance
+	account2, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID:     accountID2,
+		Amount: amount2,
+	})
+	return
 }
