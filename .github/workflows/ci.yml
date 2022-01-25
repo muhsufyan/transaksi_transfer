@@ -52,6 +52,9 @@ jobs:
 
     - name: install go-gin
       run: go get -u github.com/gin-gonic/gin
+
+    _ name: install viper 
+      run:go get github.com/spf13/viper
       
     - name: Test
       run: make test

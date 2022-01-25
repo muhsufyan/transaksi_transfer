@@ -32,6 +32,8 @@ server:
 	go run main.go
 install_go-gin:
 	go get -u github.com/gin-gonic/gin
-.PHONY: pull_postgres12alpine new_container_postgres installsqlc run_postgres createdb migratesqlc installgolangmigrate dropdb migrateup migratedown sqlcyaml generatesqlcfromyaml installpgengine test server install_go-gin
+installviper_env:
+	go get github.com/spf13/viper
+.PHONY: pull_postgres12alpine new_container_postgres installsqlc run_postgres createdb migratesqlc installgolangmigrate dropdb migrateup migratedown sqlcyaml generatesqlcfromyaml installpgengine test server install_go-gin installviper_env
 
 https://www.youtube.com/watch?v=6_CH8Gx414A docker-compose

@@ -5,13 +5,8 @@ import (
 	"log"
 	"os"
 	"testing"
-
+	"github.com/muhsufyan/transaksi_transfer/util"
 	_ "github.com/lib/pq"
-)
-
-const (
-	dbDriver = "postgres"
-	dbSource = "postgresql://root:password@localhost:5432/bank?sslmode=disable"
 )
 
 // lihat db.go struct Queries
@@ -22,9 +17,12 @@ var testDB *sql.DB
 
 // buat func dg param testing.T (setiap testing hrs ada param tipe param *testing.T)
 func TestMain(m *testing.M) {
-	var err error
+	config, err := util.LoadConfig("../..") // app.env ada di root dir sedangkan main_test.go ada di root/db/sqlc jd kita perlu ke root dir dg perintah "../.."
+	if err != nil{
+		log.Fatal("tdk bisa load config :", err)
+	}
 	// koneksi ke db
-	testDB, err = sql.Open(dbDriver, dbSource)
+	testDB, err = sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal("tdk tersambung ke db karena error :", err)
 	}
