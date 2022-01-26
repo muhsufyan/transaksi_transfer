@@ -44,4 +44,4 @@ mockdb:
 https://www.youtube.com/watch?v=6_CH8Gx414A docker-compose
 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
 
-ttd untuk semua kemungkinan yg muncul GetAccount API targetnya coverage 100%
+ttd untuk akun tdk ditemukan

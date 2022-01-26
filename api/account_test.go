@@ -8,6 +8,7 @@ import (
 	"testing"
 	"net/http"
 	"net/http/httptest"
+	"database/sql"
 	mockdb "github.com/muhsufyan/transaksi_transfer/db/mock"
 	"github.com/golang/mock/gomock"
 	db"github.com/muhsufyan/transaksi_transfer/db/sqlc"
@@ -31,7 +32,7 @@ func TestGetAccountAPI(t *testing.T) {
 		
 	}{
 		{
-			// skenario happy test
+			// skenario happy test (test data from response body)
 			name: "OK",
 			accountID: account.ID,
 			buildStubs: func(store *mockdb.MockStore){
@@ -49,6 +50,25 @@ func TestGetAccountAPI(t *testing.T) {
 				// cek response body
 				// response body tersimpan in recorder.Body(param 2), generated account (param 3) 
 				requireBodyMatchAccount(t, recorder.Body, account)
+			},
+		},
+		// test when account is not found, expected Not Found
+		{
+			name: "NotFound",
+			accountID: account.ID,
+			buildStubs: func(store *mockdb.MockStore){
+				// build stubs untuk this mock store
+				// GetAccount is interface  & ada di db/querier.go
+				// run 1 kali
+				// returned 1 akun kosong & karena akun tdk ada maka not found dg sql.ErrNoRows
+				store.EXPECT().
+					GetAccount(gomock.Any(), gomock.Eq(account.ID)).
+					Times(1).
+					Return(db.Account{}, sql.ErrNoRows)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
+				// cek response
+				require.Equal(t, http.StatusNotFound, recorder.Code)
 			},
 		},
 		// TODO add more test cases
