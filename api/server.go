@@ -9,13 +9,13 @@ import (
 type Server struct {
 	// objek *sql.DB ada di db/sqlc/store.go bagian struct Store.
 	// objek ini bertanggung jwb agar dpt terhub ke database ketika client melakukan request ke API
-	store *db.Store
+	store db.Store//now to interface
 	// gin.Engin. send each request ke handler yg sesuai
 	router *gin.Engine
 }
 
 // new HTTP server, all HTTP API route for service is here
-func NewServer(store *db.Store) *Server {
+func NewServer(store db.Store) *Server {
 	// new server
 	server := &Server{store: store}
 	// buat new router

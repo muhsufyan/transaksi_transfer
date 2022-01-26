@@ -5,25 +5,30 @@ import (
 	"database/sql"
 	"fmt"
 )
-
+// ganti obj struct Store dg interface
+type Store interface{
+	Querier
+	TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error)
+}
+// ganti Store jd SQLStore.SQLStore menyediakan semua fungsi to eksekusi SQL queries (postgres) dan transaksi
 // berisi semua fungsi query db (sblmnya query hanya dpt dijlnkan untuk 1 tabel saja, dg store itu ibaratnya variabel global untuk query(dlm konsep state management di reactjs)) dan transaksi
-type Store struct {
+type SQLStore struct {
 	// struct Queries tdk mendukung query transaksi jd solusinya dg Store ini, caranya dg embedding kedlm struct store (extend atau kita sbt inheritance di go disbt composition)
 	*Queries
 	// query db transaction
 	db *sql.DB
 }
-
+// return pointer (*Store) diubah jd return interface (Store)
 // NewStore create a new store
-func NewStore(db *sql.DB) *Store {
-	return &Store{
+func NewStore(db *sql.DB) Store {
+	return &SQLStore{
 		db:      db,
 		Queries: New(db),
 	}
 }
 
 // execute generic db transaction dg param context & fungsi callback as input. execTx akan mengeksekusi fungsi transaksi db
-func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
+func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) error {
 	//obj Queries untuk transaksi. param 2 bisa diisi &sql.TxOptions() untuk custom level transaksi tp sekarang we tdk perlu (use default level isolasi). tx adlh transfer transaksi
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -59,7 +64,7 @@ type TransferTxResult struct {
 
 // melakukan transaksi transfer uang dr 1 akun ke akun lain
 // yg dilakukan is membuat record transfer, add account entries, dan update akun balance dg 1 transaksi db
-func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
+func (store *SQLStore) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
 	var result TransferTxResult
 	// create & run new db transaksi
 	err := store.execTx(ctx, func(q *Queries) error {

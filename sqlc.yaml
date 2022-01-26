@@ -15,7 +15,7 @@ packages:
     # optimalisasi performance, ktia tdk perlu jd false
     emit_prepared_queries: false
     # mock => untuk testing, 
-    emit_interface: false
+    emit_interface: true
     # false artinya nama tabel accounts, structnya Account. true artinya nama tabel accounts, structnya Accounts
     emit_exact_table_names: false
     # true: the result returned by a many query will be an empty slice
