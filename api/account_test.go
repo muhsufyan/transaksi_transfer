@@ -71,6 +71,38 @@ func TestGetAccountAPI(t *testing.T) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
 			},
 		},
+		// test ttd untuk internal server error, expected internal error 
+		{
+			name: "InternalError",
+			accountID: account.ID,
+			buildStubs: func(store *mockdb.MockStore){
+				// returned 1 akun kosong & karena akun tdk ada maka not found dg sql.ErrNoRows
+				store.EXPECT().
+					GetAccount(gomock.Any(), gomock.Eq(account.ID)).
+					Times(1).
+					Return(db.Account{}, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
+				// cek response
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		// test ttd untuk bad request (user kirim param yg invalid ke API), expected bad request
+		// skenario nya tdk terpenuhi binding dimana id nya 0 menyebabkan invalid id shrsnya >= 1
+		{
+			name: "InvalidID",
+			accountID: 0,
+			buildStubs: func(store *mockdb.MockStore){
+				// GetAccount param 2 since id invalid GetAccount shrsnya tdk dipanggil oleh handler
+				store.EXPECT().
+					GetAccount(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
+				// cek response
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
 		// TODO add more test cases
 	}
 	// jlnkan semua test case dg loop
@@ -89,8 +121,8 @@ func TestGetAccountAPI(t *testing.T) {
 			server := NewServer(store)
 			// we not use real http api tp use record feature dr httptest
 			recorder := httptest.NewRecorder()
-			// api yg ingin kita panggil
-			url := fmt.Sprintf("/account/%d", account.ID)
+			// api yg ingin kita panggil. data ID untuk setiap test case berbeda"
+			url := fmt.Sprintf("/account/%d", tc.accountID)
 			// request body nya nil
 			request, err := http.NewRequest(http.MethodGet, url, nil) 
 			require.NoError(t, err)
