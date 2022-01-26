@@ -86,6 +86,7 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		// kembalikan semuanya
 		return
 	}
+	// account = db.Account()//cek response bodynya kosong hrs failed
 	// if tdk ada error dan id ditemukan
 	ctx.JSON(http.StatusOK, account)
 }

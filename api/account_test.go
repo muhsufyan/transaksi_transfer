@@ -1,7 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"bytes"
 	"testing"
 	"net/http"
 	"net/http/httptest"
@@ -40,6 +43,10 @@ func TestGetAccountAPI(t *testing.T) {
 	server.router.ServeHTTP(recorder, request)
 	// cek response
 	require.Equal(t, http.StatusOK, recorder.Code)
+	// cek response body
+	// response body tersimpan in recorder.Body(param 2), generated account (param 3) 
+	requireBodyMatchAccount(t, recorder.Body, account)
+
 }
 
 // generate random akun
@@ -50,4 +57,17 @@ func randomAccount() db.Account {
 		Balance:  util.RandomMoney(),
 		Currency: util.RandomCurrency(),
 	}
+}
+// CEK RESPONSE BODY
+// param 2 : response body, param 3 : obj akun untuk dibandingkan
+func requireBodyMatchAccount(t *testing.T, body *bytes.Buffer, account db.Account)  {
+	// read all data from response body (data dr param response body)
+	data, err := ioutil.ReadAll(body)
+	require.NoError(t, err)
+	// to menyimpan obj akun got from response body data
+	var gotAccount db.Account
+	// unmarshal data to the gotAccount obj
+	err = json.Unmarshal(data, &gotAccount)
+	require.NoError(t, err)
+	require.Equal(t, account, gotAccount)
 }
