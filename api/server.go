@@ -9,7 +9,7 @@ import (
 type Server struct {
 	// objek *sql.DB ada di db/sqlc/store.go bagian struct Store.
 	// objek ini bertanggung jwb agar dpt terhub ke database ketika client melakukan request ke API
-	store db.Store//now to interface
+	store db.Store //now to interface
 	// gin.Engin. send each request ke handler yg sesuai
 	router *gin.Engine
 }
@@ -25,7 +25,8 @@ func NewServer(store db.Store) *Server {
 	router.GET("/account/:id", server.getAccount)
 	// get list accounts with pagination
 	router.GET("/account", server.listAccount)
-
+	// melakukan transfer baru
+	router.POST("/transfers", server.createTransfer)
 	// route API new account
 	// disini kita bisa masukkan banyak func sprti middleware, handler, dll. tp sekarang hanya handler saja
 	// method ini adlh struct Server yg perlu we implement krn we mengakses objek store u/ menyimpan account baru ke db. implementnya ada di api/account.go

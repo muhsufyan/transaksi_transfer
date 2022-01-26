@@ -39,9 +39,3 @@ installgomock_mockdb4testing:
 mockdb:
 	mockgen -package mockdb -destination db/mock/store.go github.com/muhsufyan/transaksi_transfer/db/sqlc Store
 .PHONY: pull_postgres12alpine new_container_postgres installsqlc run_postgres createdb migratesqlc installgolangmigrate dropdb migrateup migratedown sqlcyaml generatesqlcfromyaml installpgengine test server install_go-gin installviper_env installgomock_mockdb4testing mockdb
-
-
-https://www.youtube.com/watch?v=6_CH8Gx414A docker-compose
-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
-
-unduplicate debug in gin
