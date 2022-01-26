@@ -18,35 +18,67 @@ import (
 func TestGetAccountAPI(t *testing.T) {
 	// create new account with random generate
 	account := randomAccount()
-	// gomock controller (ada di mock/store.go) as input/param
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	// 1st ttd : LIST OF TEST CASE. anonimous class u/ menyimpan test data
+	testCases :=  []struct{
+		// setiap test case have unik name 
+		name string
+		// id akun yg ingin didptkan
+		accountID int64
+		// GetAccount stubs u/ each skenario will be build differently. MockStore to build the stub karena suite untuk tujuan dr setiap test case
+		buildStubs func(store *mockdb.MockStore)
+		// cek output dr API
+		checkResponse func(t *testing.T, recoder *httptest.ResponseRecorder)
+		
+	}{
+		{
+			// skenario happy test
+			name: "OK",
+			accountID: account.ID,
+			buildStubs: func(store *mockdb.MockStore){
+				// build stubs untuk this mock store
+				// GetAccount is interface  & ada di db/querier.go
+				// run 1 kali
+				store.EXPECT().
+					GetAccount(gomock.Any(), gomock.Eq(account.ID)).
+					Times(1).
+					Return(account, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
+				// cek response
+				require.Equal(t, http.StatusOK, recorder.Code)
+				// cek response body
+				// response body tersimpan in recorder.Body(param 2), generated account (param 3) 
+				requireBodyMatchAccount(t, recorder.Body, account)
+			},
+		},
+		// TODO add more test cases
+	}
+	// jlnkan semua test case dg loop
+	for i := range testCases{
+		// simpan data dr current test case
+		tc := testCases[i]
+		// run each case as a separate sub-test of this unit test. tc.name : nama test case
+		t.Run(tc.name, func(t *testing.T){
+			// gomock controller (ada di mock/store.go) as input/param
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	store := mockdb.NewMockStore(ctrl)
-	// build stubs untuk this mock store
-	// GetAccount is interface  & ada di db/querier.go
-	// run 1 kali
-    store.EXPECT().
-        GetAccount(gomock.Any(), gomock.Eq(account.ID)).
-        Times(1).
-        Return(account, nil)
-	// start test server & send request
-	server := NewServer(store)
-	// we not use real http api tp use record feature dr httptest
-	recorder := httptest.NewRecorder()
-	// api yg ingin kita panggil
-	url := fmt.Sprintf("/account/%d", account.ID)
-	// request body nya nil
-	request, err := http.NewRequest(http.MethodGet, url, nil) 
-	require.NoError(t, err)
-	// create obj recorder & request. ini akan send request melalui server router & response berupa record berasal dr recorder
-	server.router.ServeHTTP(recorder, request)
-	// cek response
-	require.Equal(t, http.StatusOK, recorder.Code)
-	// cek response body
-	// response body tersimpan in recorder.Body(param 2), generated account (param 3) 
-	requireBodyMatchAccount(t, recorder.Body, account)
-
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+			// start test server & send request
+			server := NewServer(store)
+			// we not use real http api tp use record feature dr httptest
+			recorder := httptest.NewRecorder()
+			// api yg ingin kita panggil
+			url := fmt.Sprintf("/account/%d", account.ID)
+			// request body nya nil
+			request, err := http.NewRequest(http.MethodGet, url, nil) 
+			require.NoError(t, err)
+			// create obj recorder & request. ini akan send request melalui server router & response berupa record berasal dr recorder
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(t, recorder)
+		})
+}
 }
 
 // generate random akun
