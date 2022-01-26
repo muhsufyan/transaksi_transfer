@@ -40,8 +40,9 @@ type transferRequest struct {
 	// money going in
 	ToAccountID int64 `json:"to_account_id" binding:"required,min=1"`
 	// jumlah uang yg ditransfer. uang ditransfer hrs > 0
-	Amount   int64  `json:"amount" binding:"required,gt=0"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR RP"`
+	Amount int64 `json:"amount" binding:"required,gt=0"`
+	// terapkan custom validate yg tlh kita buat dg memanggil tagnya (api/server.go)
+	Currency string `json:"currency" binding:"required,currency"`
 }
 
 func (server *Server) createTransfer(ctx *gin.Context) {

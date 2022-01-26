@@ -2,6 +2,8 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	db "github.com/muhsufyan/transaksi_transfer/db/sqlc"
 )
 
@@ -20,6 +22,11 @@ func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	// buat new router
 	router := gin.Default()
+	// REGISTER CUSTOM VALIDATOR PD GIN. jika ok jlnkan RegisterValidation
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		// register custom validate func param 1 is tag, param 2 func validCurrency(our custom validate)
+		v.RegisterValidation("currency", validCurrency)
+	}
 	router.POST("/accounts", server.createAccount)
 	// :id is url param
 	router.GET("/account/:id", server.getAccount)

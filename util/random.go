@@ -53,7 +53,7 @@ func RandomMoney() int64 {
 // generate random currency
 func RandomCurrency() string {
 	// list berisi 3 buah currencies, EUR, USD, CAD
-	currencies := []string{"EUR", "USD", "CAD"}
+	currencies := []string{EUR, USD, CAD, RP, DINAR, DIRHAM}
 	// hitung length dr list currency
 	n := len(currencies)
 	// kembalikan random

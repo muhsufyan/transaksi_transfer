@@ -12,8 +12,8 @@ import (
 type createAccountRequest struct {
 	// isinya sama dg struct createAccountParams di sqlc/account.sql.go
 	Owner string `json:"owner" binding:"required"`
-	// Balance  int64  `json:"balance"` inactive karena saat pertama kali buat saldonya pasti kosong jd we set default balance new account = 0
-	Currency string `json:"currency" binding:"required,oneof=USD EUR"`
+	// terapkan custom validate yg tlh kita buat dg memanggil tagnya (api/server.go)
+	Currency string `json:"currency" binding:"required,currency"`
 	/* ==input param ini didptkan dari body HTTP request berupa json makanya ada json:
 	lalu binding untuk validasi memakai library go-playground/validator/v10
 	== currency hanya USD & EUR, cara validasinya lihat https://pkg.go.dev/github.com/go-playground/validator#hdr-Baked_In_Validators_and_Tags
