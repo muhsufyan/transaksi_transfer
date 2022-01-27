@@ -50,7 +50,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 		FullName:       req.FullName,
 		Email:          req.Email,
 	}
-	arg = db.CreateUserParams{} //datanya kosong sehrsnya failed when testing
+	// arg = db.CreateUserParams{} //datanya kosong sehrsnya failed when testing
 	// store to user table
 	user, err := server.store.CreateUser(ctx, arg)
 	if err != nil {

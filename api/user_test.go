@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -46,21 +48,44 @@ func requireBodyMatchUser(t *testing.T, body *bytes.Buffer, user db.User) {
 }
 
 /*
-gomock.any() matcher adlh test yg paling lemah kenapa ? jika kita simpan data kosong di api/user.go dg kode arg = db.CreateUserParams{} ketika menjlnkan testing
-dg gomock.any() hslnya akan PASS pdhl shrsnya failed karena datanya kosong
-selain itu di api/user.go bagian hash pass yaitu
-hashedPassword, err := util.HashPassword(req.Password)
-ketika kita input nya constan value misal xyz
-hashedPassword, err := util.HashPassword("xyz")
-hslnya pass pdh itu tdk dpt diterima karena hrs input dr user
-
-so kita coba gunakan matcher lainnya (selain gomock.any()) yaitu gomock.Eq() matcher
+pd branch strongunittest1 dg memakai gomock.Eq() msh ada isu so solusinya dg membuat custom matcher kita sendiri. untuk membuatnya kita perlu buat interface yg memiliki 2 method dimana
+method 1 Matches() => return apapun x input itu sama(match) atau tidak
+method 2 String() => describe what the matcher matches for logging purpose
 */
+
+type eqCreateUserParamsMatcher struct {
+	//to compare input argument correctly bth 2 field
+	arg      db.CreateUserParams
+	password string
+}
+
+func (e eqCreateUserParamsMatcher) Matches(x interface{}) bool {
+	// karena param input x is interface maka hrs convert jd db.CreateUserParams
+	arg, ok := x.(db.CreateUserParams)
+	if !ok {
+		return false
+	}
+	// jika ok maka cek hashed password itu matches dg expected password / tdk ?
+	err := util.CheckPassword(e.password, arg.HashedPassword)
+	if err != nil {
+		return false
+	}
+	e.arg.HashedPassword = arg.HashedPassword
+	// bandingkan expected argument dg input argument
+	return reflect.DeepEqual(e.arg, arg)
+}
+
+// kirim pesan
+func (e eqCreateUserParamsMatcher) String() string {
+	return fmt.Sprintf("matches arg %v & password %v", e.arg, e.password)
+}
+
+// fungsi ini adlh gerbang dari custom matcher yg kita buat
+func EqCreateUserParam(arg db.CreateUserParams, password string) gomock.Matcher {
+	return eqCreateUserParamsMatcher{arg, password}
+}
 func TestCreateUserAPI(t *testing.T) {
 	user, password := randomUser(t)
-	// generate hashed pass
-	hashedPassword, err := util.HashPassword(password)
-	require.NoError(t, err)
 	testCases := []struct {
 		// table of test cases
 		name          string
@@ -78,14 +103,14 @@ func TestCreateUserAPI(t *testing.T) {
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.CreateUserParams{
-					Username:       user.Username,
-					HashedPassword: hashedPassword,
-					FullName:       user.FullName,
-					Email:          user.Email,
+					Username: user.Username,
+					FullName: user.FullName,
+					Email:    user.Email,
 				}
-				// ganti param 2 pd CreateUser dg gomock.Eq dan di api/user.go tambah arg = db.CreateUserParams{} maka test akan failed ini baru bnr tp ada isu baru ketika kode arg = db.CreateUserParams{} inactive malah terjd failed
+				// ganti param 2 pd CreateUser dg custom matcher yaitu EqCreateUserParam. now jika kita coba di api/user.go dg kode arg = db.CreateUserParams{} hslnya failed dan kode hashedPassword, err := util.HashPassword("xyz") hslnya akan failed juga tp jika 2 kode tsb inactive akan PASS
+				// unit test now lbh kuat
 				store.EXPECT().
-					CreateUser(gomock.Any(), gomock.Eq(arg)).
+					CreateUser(gomock.Any(), EqCreateUserParam(arg, password)).
 					Times(1).
 					Return(user, nil)
 			},
