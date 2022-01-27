@@ -44,5 +44,6 @@ migrateup1:
 	migrate -path db/migration -database "postgresql://root:password@localhost:5432/bank?sslmode=disable" -verbose up 1
 migratedown1:
 	migrate -path db/migration -database "postgresql://root:password@localhost:5432/bank?sslmode=disable" -verbose down 1
-
-.PHONY: pull_postgres12alpine new_container_postgres installsqlc run_postgres createdb migratesqlc installgolangmigrate dropdb migrateup migratedown sqlcyaml generatesqlcfromyaml installpgengine test server install_go-gin installviper_env installgomock_mockdb4testing mockdb migrate_adduser migrateup1 migratedown1
+installjwt:
+	go get github.com/dgrijalva/jwt-go
+.PHONY: pull_postgres12alpine new_container_postgres installsqlc run_postgres createdb migratesqlc installgolangmigrate dropdb migrateup migratedown sqlcyaml generatesqlcfromyaml installpgengine test server install_go-gin installviper_env installgomock_mockdb4testing mockdb migrate_adduser migrateup1 migratedown1 installjwt
