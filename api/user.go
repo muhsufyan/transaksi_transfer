@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
@@ -15,6 +16,15 @@ type createUserRequest struct {
 	Password string `json:"password" binding:"required,min=6"`
 	FullName string `json:"full_name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
+}
+
+// data dlm struct ini akan dikirim ke user (jd hashed pass tdk akan dikirim)
+type createUserResponse struct {
+	Username          string    `json:"username"`
+	FullName          string    `json:"full_name"`
+	Email             string    `json:"email"`
+	PasswordChangedAt time.Time `json:"password_changed_at"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 func (server *Server) createUser(ctx *gin.Context) {
@@ -55,6 +65,13 @@ func (server *Server) createUser(ctx *gin.Context) {
 		// kembalikan semuanya
 		return
 	}
+	dataResponse := createUserResponse{
+		Username:          user.Username,
+		FullName:          user.FullName,
+		Email:             user.Email,
+		PasswordChangedAt: user.PasswordChangedAt,
+		CreatedAt:         user.CreatedAt,
+	}
 	// if no error, user berhsl dibuat. kirim status 200 & objek dr user yg dibuat
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, dataResponse)
 }
