@@ -11,11 +11,14 @@ import (
 
 // membuat data scra random untuk testing
 func createRandomUser(t *testing.T) User {
+	// hash pass, generate new pass (6 karakter)
+	hashedPassword, err := util.HashPassword(util.RandomString(6))
+	require.NoError(t, err)
 	// data random untuk testing
 	arg := CreateUserParams{
 		// kita isi datanya
 		Username:       util.RandomOwner(),
-		HashedPassword: "secret",
+		HashedPassword: hashedPassword,
 		FullName:       util.RandomOwner(),
 		Email:          util.RandomEmail(),
 	}
