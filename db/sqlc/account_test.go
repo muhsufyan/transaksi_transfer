@@ -13,10 +13,11 @@ import (
 
 // membuat data scra random untuk testing
 func createRandomAccount(t *testing.T) Account {
+	user := createRandomUser(t)
 	// data random untuk testing
 	arg := CreateAccountParams{
 		// kita isi datanya
-		Owner:    util.RandomOwner(),
+		Owner:    user.Username,
 		Balance:  util.RandomMoney(),
 		Currency: util.RandomCurrency(),
 	}
