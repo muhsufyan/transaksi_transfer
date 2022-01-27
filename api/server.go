@@ -28,7 +28,7 @@ type Server struct {
 func NewServer(config util.Config, store db.Store) (*Server, error) {
 	// buat obj token maker baru. kita bisa pilih jwt melalui token.NewJWTMaker() atau paseto melalui token.NewPasetoMaker(). Kali ini kita pilih paseto saja
 	// perlu symmetris key as input/param
-	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	tokenMaker, err := token.NewJWTMaker(config.TokenSymmetricKey) //jika ingin mengganti jd jwt maka ubah kode ini jd token.NewJWTMaker(config.TokenSymmetricKey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
@@ -38,13 +38,19 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 		tokenMaker: tokenMaker,
 		config:     config,
 	}
-	// buat new router
-	router := gin.Default()
 	// REGISTER CUSTOM VALIDATOR PD GIN. jika ok jlnkan RegisterValidation
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		// register custom validate func param 1 is tag, param 2 func validCurrency(our custom validate)
 		v.RegisterValidation("currency", validCurrency)
 	}
+	server.setupRouter()
+	return server, nil
+}
+
+// routing method
+func (server *Server) setupRouter() {
+	// buat new router
+	router := gin.Default()
 	router.POST("/accounts", server.createAccount)
 	// :id is url param
 	router.GET("/account/:id", server.getAccount)
@@ -54,12 +60,13 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 	router.POST("/transfers", server.createTransfer)
 	// buat user baru
 	router.POST("/users", server.createUser)
+	// login request
+	router.POST("/users/login", server.loginUser)
 	// route API new account
 	// disini kita bisa masukkan banyak func sprti middleware, handler, dll. tp sekarang hanya handler saja
 	// method ini adlh struct Server yg perlu we implement krn we mengakses objek store u/ menyimpan account baru ke db. implementnya ada di api/account.go
 	// save objek router ke server.router
 	server.router = router
-	return server, nil
 }
 
 // to run HTTP server on specific address
