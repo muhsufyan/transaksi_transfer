@@ -9,21 +9,23 @@ import (
 	db "github.com/muhsufyan/transaksi_transfer/db/sqlc"
 )
 
+/*
 // for store the create account request
 type createAccountRequest struct {
 	// isinya sama dg struct createAccountParams di sqlc/account.sql.go
 	Owner string `json:"owner" binding:"required"`
 	// terapkan custom validate yg tlh kita buat dg memanggil tagnya (api/server.go)
 	Currency string `json:"currency" binding:"required,currency"`
-	/* ==input param ini didptkan dari body HTTP request berupa json makanya ada json:
-	lalu binding untuk validasi memakai library go-playground/validator/v10
-	== currency hanya USD & EUR, cara validasinya lihat https://pkg.go.dev/github.com/go-playground/validator#hdr-Baked_In_Validators_and_Tags
-	bagian One Of itu u/ cek value input jd validasi USD / EUR
-	, oneof=USD EUR dlm binding
-
-	*/
 }
+*/
+/* ==input param ini didptkan dari body HTTP request berupa json makanya ada json:
+lalu binding untuk validasi memakai library go-playground/validator/v10
+== currency hanya USD & EUR, cara validasinya lihat https://pkg.go.dev/github.com/go-playground/validator#hdr-Baked_In_Validators_and_Tags
+bagian One Of itu u/ cek value input jd validasi USD / EUR
+, oneof=USD EUR dlm binding
 
+*/
+/*
 // func dg server pointer receiver. paramnya objek gin.Context as input
 // karena (see) POST() di part param ada HandlerFunc dideklarasikan as func dg Context input
 // umumnya when use gin everything we do in side handler will melibatkan obj Context ini, juga u/ read input param & write out responses
@@ -60,6 +62,41 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 	// if no error, akun berhsl dibuat. kirim status 200 & objek dr account yg dibuat
+	ctx.JSON(http.StatusOK, account)
+}
+*/
+type createAccountRequest struct {
+	// isinya sama dg struct createAccountParams di sqlc/account.sql.go
+	Owner string `json:"owner" binding:"required"`
+	// terapkan custom validate yg tlh kita buat dg memanggil tagnya (api/server.go)
+	Currency string `json:"currency" binding:"required,currency"`
+}
+
+func (server *Server) createAccount(ctx *gin.Context) {
+	var req createAccountRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	arg := db.CreateAccountParams{
+		Owner:    req.Owner,
+		Currency: req.Currency,
+		Balance:  0,
+	}
+
+	account, err := server.store.CreateAccount(ctx, arg)
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "foreign_key_violation", "unique_violation":
+				ctx.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	ctx.JSON(http.StatusOK, account)
 }
 

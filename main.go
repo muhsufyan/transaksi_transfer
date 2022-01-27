@@ -4,10 +4,11 @@ import (
 	// tanpa ini _"github.com/lib/pq" we cant talk to db
 	"database/sql"
 	"log"
-	"github.com/muhsufyan/transaksi_transfer/util"
+
 	_ "github.com/lib/pq"
 	"github.com/muhsufyan/transaksi_transfer/api"
 	db "github.com/muhsufyan/transaksi_transfer/db/sqlc"
+	"github.com/muhsufyan/transaksi_transfer/util"
 )
 
 /*
@@ -16,9 +17,9 @@ import (
 */
 
 func main() {
-	// config lewat env 
-	config, err := util.LoadConfig(".")//"." karena main.go dan app.env ada di dir yg sama (root)
-	if err != nil{
+	// config lewat env
+	config, err := util.LoadConfig(".") //"." karena main.go dan app.env ada di dir yg sama (root)
+	if err != nil {
 		log.Fatal("tdk bisa load config :", err)
 	}
 	// konek to db
@@ -27,7 +28,10 @@ func main() {
 		log.Fatal("tdk tersambung ke db karena error :", err)
 	}
 	store := db.NewStore(koneksi)
-	server := api.NewServer(store)
+	server, err := api.NewServer(config, store)
+	if err != nil {
+		log.Fatal("cant create server :", err)
+	}
 	// to start the server
 	err = server.Start(config.ServerAddress)
 	if err != nil {

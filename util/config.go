@@ -1,18 +1,25 @@
 package util
+
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
+
 /*
 semua config untuk development disimpan di root/app.env
 */
 
 // config stores all configuration of the app (env). the value are read from file environment variabel (app.env)
-type Config struct{
-// get the value from env variable (app.env) gunakan unmashal(). viper use mapstructure untuk unmarshaling values
-	DBDriver string `mapstructure:"DB_DRIVER"`
-	DBSource string	`mapstructure:"DB_SOURCE"`
-	ServerAddress string `mapstructure:"SERVER_ADDRESS"`
+type Config struct {
+	// get the value from env variable (app.env) gunakan unmashal(). viper use mapstructure untuk unmarshaling values
+	DBDriver            string        `mapstructure:"DB_DRIVER"`
+	DBSource            string        `mapstructure:"DB_SOURCE"`
+	ServerAddress       string        `mapstructure:"SERVER_ADDRESS"`
+	TokenSymmetricKey   string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
+	AccessTokenDuration time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 }
+
 // read configurasi from file / env variable (our case is app.env)
 func LoadConfig(path string) (config Config, err error) {
 	// lokasi dari file config
@@ -24,12 +31,12 @@ func LoadConfig(path string) (config Config, err error) {
 
 	// viper read value from env varia
 	// scra otomatis meng-override nilai yg dimiliki saat read config file dg nilai dari correspoding env var if exist
-	viper.AutomaticEnv() 
+	viper.AutomaticEnv()
 	// start reading config value
 	err = viper.ReadInConfig()
-	if err != nil{
+	if err != nil {
 		// kembalikan err
-		return 
+		return
 	}
 	// if no error maka unmarshal nilai kedlm objek target config
 	viper.Unmarshal(&config)
