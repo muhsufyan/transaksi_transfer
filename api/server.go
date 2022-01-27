@@ -34,6 +34,8 @@ func NewServer(store db.Store) *Server {
 	router.GET("/account", server.listAccount)
 	// melakukan transfer baru
 	router.POST("/transfers", server.createTransfer)
+	// buat user baru
+	router.POST("/users", server.createUser)
 	// route API new account
 	// disini kita bisa masukkan banyak func sprti middleware, handler, dll. tp sekarang hanya handler saja
 	// method ini adlh struct Server yg perlu we implement krn we mengakses objek store u/ menyimpan account baru ke db. implementnya ada di api/account.go
