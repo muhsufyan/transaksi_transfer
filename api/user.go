@@ -35,6 +35,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	// hashedPassword, err := util.HashPassword("xyz") //unacceptable, hrsnya saat test adlh failed
 	// Jika input data valid
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
@@ -49,6 +50,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 		FullName:       req.FullName,
 		Email:          req.Email,
 	}
+	arg = db.CreateUserParams{} //datanya kosong sehrsnya failed when testing
 	// store to user table
 	user, err := server.store.CreateUser(ctx, arg)
 	if err != nil {

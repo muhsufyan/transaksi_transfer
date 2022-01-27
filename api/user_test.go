@@ -44,9 +44,23 @@ func requireBodyMatchUser(t *testing.T, body *bytes.Buffer, user db.User) {
 	require.Equal(t, user.Email, gotUser.Email)
 	require.Empty(t, gotUser.HashedPassword)
 }
+
+/*
+gomock.any() matcher adlh test yg paling lemah kenapa ? jika kita simpan data kosong di api/user.go dg kode arg = db.CreateUserParams{} ketika menjlnkan testing
+dg gomock.any() hslnya akan PASS pdhl shrsnya failed karena datanya kosong
+selain itu di api/user.go bagian hash pass yaitu
+hashedPassword, err := util.HashPassword(req.Password)
+ketika kita input nya constan value misal xyz
+hashedPassword, err := util.HashPassword("xyz")
+hslnya pass pdh itu tdk dpt diterima karena hrs input dr user
+
+so kita coba gunakan matcher lainnya (selain gomock.any()) yaitu gomock.Eq() matcher
+*/
 func TestCreateUserAPI(t *testing.T) {
 	user, password := randomUser(t)
-
+	// generate hashed pass
+	hashedPassword, err := util.HashPassword(password)
+	require.NoError(t, err)
 	testCases := []struct {
 		// table of test cases
 		name          string
@@ -63,8 +77,15 @@ func TestCreateUserAPI(t *testing.T) {
 				"email":     user.Email,
 			},
 			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.CreateUserParams{
+					Username:       user.Username,
+					HashedPassword: hashedPassword,
+					FullName:       user.FullName,
+					Email:          user.Email,
+				}
+				// ganti param 2 pd CreateUser dg gomock.Eq dan di api/user.go tambah arg = db.CreateUserParams{} maka test akan failed ini baru bnr tp ada isu baru ketika kode arg = db.CreateUserParams{} inactive malah terjd failed
 				store.EXPECT().
-					CreateUser(gomock.Any(), gomock.Any()).
+					CreateUser(gomock.Any(), gomock.Eq(arg)).
 					Times(1).
 					Return(user, nil)
 			},
