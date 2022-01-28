@@ -2,35 +2,37 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/muhsufyan/transaksi_transfer/db/sqlc"
+	"github.com/muhsufyan/transaksi_transfer/token"
 )
 
 // mengecek (membandingkan) mata uang/currency pentransfer dan penerima (mata uangnya hrs sama)
-func (server *Server) validAccount(ctx *gin.Context, accountID int64, currency string) bool {
+func (server *Server) validAccount(ctx *gin.Context, accountID int64, currency string) (db.Account, bool) {
 	// get akun from db
 	account, err := server.store.GetAccount(ctx, accountID)
 	if err != nil {
 		// skenario 1 jika akun tdk ada didb
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return false
+			return account, false
 		}
 		// skenario 2 jika unexpected error occur
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return false
+		return account, false
 	}
 	// jika tdk ada error tp currencynya tdk sama
 	if account.Currency != currency {
 		err := fmt.Errorf("mata uang dari akun [%d] tidak sama : %s vs %s", account.ID, account.Currency, currency)
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return false
+		return account, false
 	}
 	// jika tdk ada mslh & valid
-	return true
+	return account, true
 }
 
 // for store the create account request
@@ -54,12 +56,23 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	// store result of validAccount
+	fromAccount, valid := server.validAccount(ctx, req.FromAccountID, req.Currency)
 	// validasi mata uang nya sama (USD => USD) untuk pentransfer
-	if !server.validAccount(ctx, req.FromAccountID, req.Currency) {
+	if !valid {
 		return
 	}
+	// get otorisasi payload. will return general interface
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if fromAccount.Owner != authPayload.Username {
+		err := errors.New("from account doesnt belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+	// store result of validAccount
+	_, valid = server.validAccount(ctx, req.ToAccountID, req.Currency)
 	// validasi mata uang nya sama (USD => USD) untuk penerima
-	if !server.validAccount(ctx, req.ToAccountID, req.Currency) {
+	if !valid {
 		return
 	}
 	// Jika input data valid. insert new transfer to db

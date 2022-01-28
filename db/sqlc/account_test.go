@@ -96,24 +96,28 @@ func TestDeleteAccount(t *testing.T) {
 }
 
 func TestListAccount(t *testing.T) {
+	// filter by owner dr akun terakhir
+	var lastAccount Account
 	// buat 10 account baru dg data yg digenerate random & simpan ke db
 	for i := 0; i < 10; i++ {
-		createRandomAccount(t)
+		lastAccount = createRandomAccount(t)
 	}
 	// tangkap 5 data dari 10
 	arg := ListAccountsParams{
+		Owner: lastAccount.Owner,
 		// limit & offset = 5 artinya skip 5 record pertama dan return 5 record selanjutnya
 		Limit:  5,
-		Offset: 5,
+		Offset: 0,
 	}
 	// dr 10 yg dibuat get 5 record saja yg didpt dr db
 	accounts, err := testQueries.ListAccounts(context.Background(), arg)
 	require.NoError(t, err)
 	// returned akun 5
-	require.Len(t, accounts, 5)
+	require.NotEmpty(t, accounts)
 	// iterate list of account
 	for _, account := range accounts {
 		require.NotEmpty(t, account)
+		require.Equal(t, lastAccount.Owner, account.Owner)
 	}
 	//  run TestListAccount
 }

@@ -2,11 +2,13 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	db "github.com/muhsufyan/transaksi_transfer/db/sqlc"
+	"github.com/muhsufyan/transaksi_transfer/token"
 )
 
 /*
@@ -66,8 +68,7 @@ func (server *Server) createAccount(ctx *gin.Context) {
 }
 */
 type createAccountRequest struct {
-	// isinya sama dg struct createAccountParams di sqlc/account.sql.go
-	Owner string `json:"owner" binding:"required"`
+	// client hanya dpt membuat akun untuk dirinya sendiri jd owner dihapus
 	// terapkan custom validate yg tlh kita buat dg memanggil tagnya (api/server.go)
 	Currency string `json:"currency" binding:"required,currency"`
 }
@@ -78,8 +79,11 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	// owner yaitu username stored di payload otorisasi
+	// get otorisasi payload. will return general interface
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    authPayload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -132,8 +136,15 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		// kembalikan semuanya
 		return
 	}
-	// account = db.Account()//cek response bodynya kosong hrs failed
-	// if tdk ada error dan id ditemukan
+	// get otorisasi payload. will return general interface
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	// hanya dpt melihat data akun dirinya sendiri
+	if account.Owner != authPayload.Username {
+		err := errors.New("account doesnt belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+	// if tdk ada error, id ditemukan, dia adlh pemilik akunnya
 	ctx.JSON(http.StatusOK, account)
 }
 
@@ -156,8 +167,11 @@ func (server *Server) listAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	//
+	//add otorisasi
+	// get otorisasi payload. will return general interface
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.ListAccountsParams{
+		Owner: authPayload.Username,
 		// 2 field yaitu limit & offset
 		Limit: req.PageSize,
 		// offset is jumlah record dr db yg hrs di skip, hitung dr page id & page size

@@ -9,24 +9,30 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	mockdb "github.com/muhsufyan/transaksi_transfer/db/mock"
 	db "github.com/muhsufyan/transaksi_transfer/db/sqlc"
+	"github.com/muhsufyan/transaksi_transfer/token"
 	"github.com/muhsufyan/transaksi_transfer/util"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetAccountAPI(t *testing.T) {
+	// create new random user
+	user, _ := randomUser(t)
 	// create new account with random generate
-	account := randomAccount()
+	account := randomAccount(user.Username)
 	// 1st ttd : LIST OF TEST CASE. anonimous class u/ menyimpan test data
 	testCases := []struct {
 		// setiap test case have unik name
 		name string
 		// id akun yg ingin didptkan
 		accountID int64
+		// setup header otorisasi dr request. param 3 token maker interface to buat token akses
+		setupAuth func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		// GetAccount stubs u/ each skenario will be build differently. MockStore to build the stub karena suite untuk tujuan dr setiap test case
 		buildStubs func(store *mockdb.MockStore)
 		// cek output dr API
@@ -36,6 +42,11 @@ func TestGetAccountAPI(t *testing.T) {
 			// skenario happy test (test data from response body)
 			name:      "OK",
 			accountID: account.ID,
+			// implement otorisasi
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				// setup auth func. waktunya 1 menit
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs untuk this mock store
 				// GetAccount is interface  & ada di db/querier.go
@@ -53,10 +64,57 @@ func TestGetAccountAPI(t *testing.T) {
 				requireBodyMatchAccount(t, recorder.Body, account)
 			},
 		},
+		// test case token usernya tdk sama dg dirinya
+		{
+			name:      "UnauthorizedUser",
+			accountID: account.ID,
+			// implement otorisasi
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				// setup auth func.
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "unauthorized_user", time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// build stubs untuk this mock store
+				// GetAccount is interface  & ada di db/querier.go
+				// run 1 kali
+				store.EXPECT().
+					GetAccount(gomock.Any(), gomock.Eq(account.ID)).
+					Times(1).
+					Return(account, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				// cek response
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
+		// test case token client tdk punya token akses
+		{
+			name:      "NoAuthorization",
+			accountID: account.ID,
+			// implement otorisasi
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// build stubs untuk this mock store
+				// expectednya GetAccount tdk dijlnkan
+				store.EXPECT().
+					GetAccount(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				// cek response
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
 		// test when account is not found, expected Not Found
 		{
 			name:      "NotFound",
 			accountID: account.ID,
+			// implement otorisasi
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				// setup auth func. waktunya 1 menit
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs untuk this mock store
 				// GetAccount is interface  & ada di db/querier.go
@@ -76,6 +134,11 @@ func TestGetAccountAPI(t *testing.T) {
 		{
 			name:      "InternalError",
 			accountID: account.ID,
+			// implement otorisasi
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				// setup auth func. waktunya 1 menit
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// returned 1 akun kosong & karena akun tdk ada maka not found dg sql.ErrNoRows
 				store.EXPECT().
@@ -93,6 +156,11 @@ func TestGetAccountAPI(t *testing.T) {
 		{
 			name:      "InvalidID",
 			accountID: 0,
+			// implement otorisasi
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				// setup auth func. waktunya 1 menit
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// GetAccount param 2 since id invalid GetAccount shrsnya tdk dipanggil oleh handler
 				store.EXPECT().
@@ -127,6 +195,8 @@ func TestGetAccountAPI(t *testing.T) {
 			// request body nya nil
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
+
+			tc.setupAuth(t, request, server.tokenMaker)
 			// create obj recorder & request. ini akan send request melalui server router & response berupa record berasal dr recorder
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(t, recorder)
@@ -135,10 +205,10 @@ func TestGetAccountAPI(t *testing.T) {
 }
 
 // generate random akun
-func randomAccount() db.Account {
+func randomAccount(owner string) db.Account {
 	return db.Account{
 		ID:       util.RandomInt(1, 1000),
-		Owner:    util.RandomOwner(),
+		Owner:    owner,
 		Balance:  util.RandomMoney(),
 		Currency: util.RandomCurrency(),
 	}
@@ -159,7 +229,10 @@ func requireBodyMatchAccount(t *testing.T, body *bytes.Buffer, account db.Accoun
 }
 
 func TestCreateAccountAPI(t *testing.T) {
-	account := randomAccount()
+	// create new random user
+	user, _ := randomUser(t)
+	// create new account with random generate
+	account := randomAccount(user.Username)
 
 	testCases := []struct {
 		name          string
@@ -251,10 +324,12 @@ func TestCreateAccountAPI(t *testing.T) {
 }
 
 func TestListAccountsAPI(t *testing.T) {
+	// create new random user
+	user, _ := randomUser(t)
 	n := 5
 	accounts := make([]db.Account, n)
 	for i := 0; i < n; i++ {
-		accounts[i] = randomAccount()
+		accounts[i] = randomAccount(user.Username)
 	}
 
 	type Query struct {
