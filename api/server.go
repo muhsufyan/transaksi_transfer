@@ -51,13 +51,16 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 func (server *Server) setupRouter() {
 	// buat new router
 	router := gin.Default()
-	router.POST("/accounts", server.createAccount)
+	// buat route group yg menerapkan/menggunakan authMiddleware yg tlh kita buat
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+	// sekarang url yg menerapkan authMiddleware hrs melewati otorisasi dl
+	authRoutes.POST("/accounts", server.createAccount)
 	// :id is url param
-	router.GET("/account/:id", server.getAccount)
+	authRoutes.GET("/account/:id", server.getAccount)
 	// get list accounts with pagination
-	router.GET("/account", server.listAccount)
+	authRoutes.GET("/account", server.listAccount)
 	// melakukan transfer baru
-	router.POST("/transfers", server.createTransfer)
+	authRoutes.POST("/transfers", server.createTransfer)
 	// buat user baru
 	router.POST("/users", server.createUser)
 	// login request
